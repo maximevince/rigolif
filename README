@@ -1,0 +1,9 @@
+# rigolif
+
+Originally created by "konnor" at eevblog.com
+
+
+According to https://www.eevblog.com/forum/testgear/rigol-ds1000z-firmware-patch-plugins/
+rigolif is this: "Very primitive program for working with an oscilloscope. It is given in the source texts. Allows you to read and write memory of the oscilloscope, call internal functions, load plug-ins."
+
+I have quickly ported the application to GNU/Linux and hopefully other POSIX OSes as well.
