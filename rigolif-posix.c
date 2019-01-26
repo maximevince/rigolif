@@ -400,23 +400,28 @@ int main(int argc, char * *argv)
         switch (argv[1][0])
         {
             case 'v':
-            case 'V':   Wm = WORK_VIEW;
+            case 'V':
+                Wm = WORK_VIEW;
                 break;
 
             case 'r':
-            case 'R':   Wm = WORK_READ;
+            case 'R':
+                Wm = WORK_READ;
                 break;
 
             case 'w':
-            case 'W':   Wm = WORK_WRITE;
+            case 'W':
+                Wm = WORK_WRITE;
                 break;
 
             case 'c':
-            case 'C':   Wm = WORK_CALL;
+            case 'C':
+                Wm = WORK_CALL;
                 break;
 
             case 'l':
-            case 'L':   Wm = WORK_LOAD;
+            case 'L':
+                Wm = WORK_LOAD;
                 break;
 
             default:
@@ -424,6 +429,7 @@ int main(int argc, char * *argv)
                 HelpOut();
                 return(1);
         }
+
         for (CurKey = 2; CurKey < argc; CurKey++) {
             char *Key;
             Key = argv[CurKey];
@@ -441,7 +447,8 @@ int main(int argc, char * *argv)
             {
                 //	" -i<address> - set scope IP address\n"
                 case 'i':
-                case 'I':   he = gethostbyname(Key + 2);
+                case 'I':
+                    he = gethostbyname(Key + 2);
                     if (NULL == he) {
                         printf("Unable to get IP address for [%s]\n", Key + 2);
                         HelpOut();
@@ -451,21 +458,24 @@ int main(int argc, char * *argv)
 
                 //		" -s          - silent mode\n"
                 case 's':
-                case 'S':   silent_flag = true;
+                case 'S':
+                    silent_flag = true;
                     break;
 
                 //" -a<address> - setup target address\n"
                 case 'a':
-                case 'A':   address = Getvalue(Key + 2);
+                case 'A':
+                    address = Getvalue(Key + 2);
                     break;
 
                 //		" -v<value>   - setup value to write\n"
                 case 'v':
-                case 'V':   if (NULL != filename) {
+                case 'V':
+                    if (NULL != filename) {
                         printf("File-mode already selected\n");
                         HelpOut();
                         return(1);
-                }
+                    }
                     value = Getvalue(Key + 2);
                     break;
 
@@ -488,12 +498,14 @@ int main(int argc, char * *argv)
 
                 //	" -f<File>    - File for read/write/run\n"
                 case 'F':
-                case 'f':   filename = Key + 2;
+                case 'f':
+                    filename = Key + 2;
                     break;
 
                 //	" -l<len>	  - length in dwords\n"
                 case 'L':
-                case 'l':   length = Getvalue(Key + 2);
+                case 'l':
+                    length = Getvalue(Key + 2);
                     break;
 
                 default:
@@ -506,13 +518,15 @@ int main(int argc, char * *argv)
     // check params
     switch (Wm)
     {
-        case WORK_VIEW:     break;
+        case WORK_VIEW:
+            break;
 
-        case WORK_READ:     if ((address & 3) || (length < 1)) {
+        case WORK_READ:
+            if ((address & 3) || (length < 1)) {
                 printf("Bad read parametrs\n");
                 HelpOut();
                 return(1);
-        }
+            }
             if (NULL != filename) {
                 if (NULL == (fIO = fopen(filename, "wb"))) {
                     printf("Unable to open file [%s]\n", filename);
@@ -522,11 +536,12 @@ int main(int argc, char * *argv)
             }
             break;
 
-        case WORK_CALL:     if ((address & 3)) {
+        case WORK_CALL:
+            if ((address & 3)) {
                 printf("Bad call parametrs\n");
                 HelpOut();
                 return(1);
-        }
+            }
             if (NULL != filename) {
                 if (NULL == (fIO = fopen(filename, "wb"))) {
                     printf("Unable to open file [%s]\n", filename);
@@ -536,11 +551,12 @@ int main(int argc, char * *argv)
             }
             break;
 
-        case WORK_LOAD:     if (NULL == filename) {
+        case WORK_LOAD:
+            if (NULL == filename) {
                 printf("No plugin name\n");
                 HelpOut();
                 return(1);
-        }
+            }
             if (NULL == (fIO = fopen(filename, "rb"))) {
                 printf("Unable to open plugin file [%s]\n", filename);
                 HelpOut();
@@ -548,11 +564,12 @@ int main(int argc, char * *argv)
             }
             break;
 
-        case WORK_WRITE:    if ((address & 3)) {
+        case WORK_WRITE:
+            if ((address & 3)) {
                 printf("Bad write address\n");
                 HelpOut();
                 return(1);
-        }
+            }
             if (NULL != filename) {
                 if (NULL == (fIO = fopen(filename, "rb"))) {
                     printf("Unable to open binary file [%s]\n", filename);
@@ -562,12 +579,14 @@ int main(int argc, char * *argv)
             }
             break;
     }
+
     if (NULL == he) {
         if (FindRigol((struct sockaddr *)&SAddr)) {
             printf("Unable to autodetect IP-address\r\n");
             return(1);
         }
     }
+
     Sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (Sock == INVALID_SOCKET ) {
         printf("Unable to create socket, errror %d\r\n", errno);
@@ -601,7 +620,7 @@ int main(int argc, char * *argv)
         case WORK_READ:
             if (length > 100000) {
                 long_operation = true;
-                //						if(!silent_flag) printf("\n", address);
+                //if(!silent_flag) printf("\n", address);
             }
             items_cnt = 0;
             while (length > 0) {
@@ -621,7 +640,7 @@ int main(int argc, char * *argv)
                     fwrite(answer, 1, cur_len * 4, fIO);
                 }
                 else{
-                    // out to stdout - to doooooooooo.....
+                    //out to stdout - to doooooooooo.....
                 }
                 items_cnt -= cur_len;
                 address += cur_len * 4;
