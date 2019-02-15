@@ -11,9 +11,8 @@
 #include <sys/socket.h>
 #include <netinet/ip.h>
 #include <netdb.h>
-//#include <winsock2.h>
 
-//#pragma comment(lib,"Ws2_32.lib")
+#define debug(...)  {if(!silent_flag) printf(__VA_ARGS__);}
 
 enum workmode {
     WORK_VIEW,
@@ -144,20 +143,20 @@ static int FindRigol(struct sockaddr *RigolAddr)
         len = NetSelAndRecvfrom(SCK, Answ, sizeof(Answ), 100u, RigolAddr, &Fromlen);
         if (len > 0) {
             Answ[len] = 0;
-            if (!silent_flag) printf("Autodetect answer: [%s] from %u.%u.%u.%u\n",
-                                     Answ,
-                                     (unsigned char)RigolAddr->sa_data[2],
-                                     (unsigned char)RigolAddr->sa_data[3],
-                                     (unsigned char)RigolAddr->sa_data[4],
-                                     (unsigned char)RigolAddr->sa_data[5]
-                                     );
+            debug("Autodetect answer: [%s] from %u.%u.%u.%u\n",
+                    Answ,
+                    (unsigned char)RigolAddr->sa_data[2],
+                    (unsigned char)RigolAddr->sa_data[3],
+                    (unsigned char)RigolAddr->sa_data[4],
+                    (unsigned char)RigolAddr->sa_data[5]
+                 );
             closesocket(SCK);
             return(0);
         }
         no_answer--;
     } while (no_answer > 0);
     closesocket(SCK);
-    if (!silent_flag) printf("No Rigol detected\n");
+    debug("No Rigol detected\n");
     return(-2);
 }
 
@@ -169,7 +168,7 @@ int RigolExchange(int Sock, RigolReqBlock *SrcBuf, void *Dst, size_t Maxlen, int
     // Зашлем управляющий блок
     RealSize = send(Sock, (void *) SrcBuf, sizeof(RigolReqBlock), 0);
     if ( RealSize != sizeof(RigolReqBlock) ) {
-        if (!silent_flag) printf("TX Error (%d/%d), code =%d\n", RealSize, (int)sizeof(RigolReqBlock), errno);
+        debug("TX Error (%d/%d), code =%d\n", RealSize, (int)sizeof(RigolReqBlock), errno);
         return(-1);
     }
     // Проверим ответ с таймаутом
@@ -185,7 +184,7 @@ int RigolGetIdent(int Sock, uint8_t *TextBuffer, int Maxlen)
     Req.Terminator = 0;
     len = RigolExchange(Sock, &Req, TextBuffer, Maxlen - 1, timeout_io);
     if (len <= 0) {
-        if (!silent_flag) printf("Get Ident Io Error, %d\n", len);
+        debug("Get Ident Io Error, %d\n", len);
         return(-1);
     }
     if (len > Maxlen - 1) len = Maxlen - 1;
@@ -203,13 +202,13 @@ int RigolWriteDword(int Sock, uint32_t address, uint32_t value)
     Req.param1  = value;
     len = RigolExchange(Sock, &Req, &Req, sizeof(Req), timeout_io);
     if (len != sizeof(Req)) {
-        if (!silent_flag) printf("Error on write %08X to %08X, %d\n", value, address, len);
+        debug("Error on write %08X to %08X, %d\n", value, address, len);
         return(-1);
     }
     if ((Req.address != address) ||
         ((Req.param1 ^ ~value) != 0) ||
         (Req.Cmd != 'W')) {
-        if (!silent_flag) printf("Bad answer packet on write %08X to %08X\n", value, address);
+        debug("Bad answer packet on write %08X to %08X\n", value, address);
         return(-2);
     }
     return(1);
@@ -239,8 +238,7 @@ int RigolReadDword(int Sock, uint32_t address, unsigned int Num, void *answerBuf
 Repp:
             if (len == (cur_len + 2) * 4) break;
             if (RepeatCounter++ > 5) {
-                if (!silent_flag) printf("Fatal error on read %d dwords from %08X, %d\n",
-                                         Req.param2 + 1, address, len);
+                debug("Fatal error on read %d dwords from %08X, %d\n", Req.param2 + 1, address, len);
                 return(-1);
             }
             RepPktCntr++;
@@ -259,11 +257,11 @@ Repp:
         if ( (answerBuf[0] != address) ||
              (answerBuf[1] != cur_len - 1)) {
             if (RepeatCounter++ > 5) {
-                if (!silent_flag) printf("Fatal, bad answer packet on read %d dwords from %08X (%d@%X)\n",
-                                         cur_len, address,
-                                         answerBuf[1] + 1,
-                                         answerBuf[0]
-                                         );
+                debug("Fatal, bad answer packet on read %d dwords from %08X (%d@%X)\n",
+                        cur_len, address,
+                        answerBuf[1] + 1,
+                        answerBuf[0]
+                     );
                 return(-1);
             }
             // repeat request
@@ -292,12 +290,12 @@ int RigolCallFunc(int Sock, uint32_t address, uint32_t param1, uint16_t param2, 
     Req.param2  = param2;
     len = RigolExchange(Sock, &Req, &Req, sizeof(Req), timeout_run);
     if (len != sizeof(Req)) {
-        if (!silent_flag) printf("Error on call %08X(%08X,%08X) =  %d\n", address, param1, param2, len);
+        debug("Error on call %08X(%08X,%08X) =  %d\n", address, param1, param2, len);
         return(-1);
     }
     if ((Req.address != address) ||
         (Req.Cmd != 'C')) {
-        if (!silent_flag) printf("Bad answer packet on call %08X\n", address);
+        debug("Bad answer packet on call %08X\n", address);
         return(-2);
     }
     if (NULL != Result) *Result = Req.param1;
@@ -335,7 +333,7 @@ static uint32_t Getvalue(char *Text)
     uint32_t Val;
     Val = strtoul(Text, &EndTxt, 0);
     if ((EndTxt == NULL) || (EndTxt[0] != 0)) {
-        if (!silent_flag) printf("Bad value: [%s]\n", Text);
+        debug("Bad value: [%s]\n", Text);
         HelpOut();
         exit(23);
     }
@@ -349,7 +347,7 @@ static int LoadFile2Scope(int Sock, FILE *Src, uint32_t address, uint32_t length
         uint32_t Val = 0;
         fread(&Val, 1, 4, Src);
         if (0 >= (len = RigolWriteDword(Sock, address, Val))) {
-            if (!silent_flag) printf("Write error at address %08X\n", address);
+            debug("Write error at address %08X\n", address);
             return(-1);
         }
         address += 4;
@@ -425,7 +423,7 @@ int main(int argc, char * *argv)
                 break;
 
             default:
-                if (!silent_flag) printf("Unknown work mode [%s]\n", argv[1]);
+                debug("Unknown work mode [%s]\n", argv[1]);
                 HelpOut();
                 return(1);
         }
@@ -439,7 +437,7 @@ int main(int argc, char * *argv)
                 case '/': break;
 
                 default:
-                    if (!silent_flag) printf("Bad key [%s]\n", Key);
+                    debug("Bad key [%s]\n", Key);
                     HelpOut();
                     return(1);
             }
@@ -611,8 +609,7 @@ int main(int argc, char * *argv)
                 printf("Device ID: [%s]\n", answer);
             }
             else {
-                if (!silent_flag)
-                    printf("Io Error, %d\n", len);
+                debug("Io Error, %d\n", len);
                 retcode = 10;
             }
             break;
@@ -629,10 +626,10 @@ int main(int argc, char * *argv)
                 if (cur_len > length) cur_len = length;
                 if ((items_cnt <= 0) && long_operation) {
                     items_cnt = 100000;
-                    if (!silent_flag) printf("\r%08X ", address);
+                    debug("\r%08X ", address);
                 }
                 if (0 > (len = RigolReadDword(Sock, address, cur_len, answer))) {
-                    if (!silent_flag) printf("Io Error, %d\n", len);
+                    debug("Io Error, %d\n", len);
                     retcode = 10;
                     break;
                 }
@@ -654,14 +651,14 @@ int main(int argc, char * *argv)
                 else printf("Result=0x%08X\n", *(uint32_t *)answer);
             }
             else {
-                if (!silent_flag) printf("Io Error, %d\n", len);
+                debug("Io Error, %d\n", len);
                 retcode = 10;
             }
             break;
 
         case WORK_LOAD:
             if (0 >= (length = GetFSize(fIO))) {
-                if (!silent_flag) printf("Bad plugin size\n");
+                debug("Bad plugin size\n");
                 retcode = 10;
                 break;
             }
@@ -670,27 +667,25 @@ int main(int argc, char * *argv)
             // Alloc Memory
             address = 0;
             if (0 >= (len = RigolCallFunc(Sock, 0x40026F84, length, 0, &address))) {
-                if (!silent_flag) printf("unable to call malloc, %d\n", len);
+                debug("unable to call malloc, %d\n", len);
                 retcode = 10;
                 break;
             }
             if (0 == address) {
-                if (!silent_flag) printf("unable to alloc %d bytes\n", length);
+                debug("unable to alloc %d bytes\n", length);
                 retcode = 20;
                 break;
             }
-            else if (!silent_flag) printf("Allocate %u bytes at %08X\n", length, address);
+            else debug("Allocate %u bytes at %08X\n", length, address);
             // Load To address
             if (0 >= (len = LoadFile2Scope(Sock, fIO, address, length))) {
-                if (!silent_flag)
-                    printf("Load File Error, %d\n", len);
+                debug("Load File Error, %d\n", len);
                 retcode = 20;
                 break;
             }
             // Call Plugin
             if (0 >= (len = RigolCallFunc(Sock, address, 0, 0, &address))) {
-                if (!silent_flag)
-                    printf("answer Error, %d\n", len);
+                debug("answer Error, %d\n", len);
                 retcode = 10;
                 break;
             }
@@ -699,8 +694,7 @@ int main(int argc, char * *argv)
         case WORK_WRITE:
             if (NULL != fIO) {
                 if (0 >= (length = GetFSize(fIO))) {
-                    if (!silent_flag)
-                        printf("Bad image size\n");
+                    debug("Bad image size\n");
                     retcode = 10;
                     break;
                 }
@@ -708,8 +702,7 @@ int main(int argc, char * *argv)
             }
             else len = RigolWriteDword(Sock, address, value);
             if (0 >= len) {
-                if (!silent_flag)
-                    printf("Write data Error, %d\n", len);
+                debug("Write data Error, %d\n", len);
                 retcode = 20;
                 break;
             }
